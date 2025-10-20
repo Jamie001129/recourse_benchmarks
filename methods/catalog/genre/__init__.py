@@ -1,2 +1,2 @@
 # flake8: noqa
-from .method import GenRe
+from .model import GenRe
