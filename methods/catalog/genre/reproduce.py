@@ -91,24 +91,24 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
     print(f"{'='*80}")
     
     # 1. Load Random Forest (for labels and gold evaluation)
-    rf_path = os.path.join(saved_models_dir, f'classifiers/{dataset_name}/rf_tt_mm/state.pkl')
+    rf_path = os.path.join(saved_models_dir, 'classifiers', dataset_name, 'rf_tt_mm', 'state.pkl')
     print(f"Loading RF from: {rf_path}")
     
     if not os.path.exists(rf_path):
         raise FileNotFoundError(f"RF model not found: {rf_path}")
     
     with open(rf_path, 'rb') as f:
-        rf_clf = pickle.load(f, f, encoding='latin1')
+        rf_clf = pickle.load(f)
     print(f"✓ RF loaded")
     
     # 2. Load ANN Classifier
-    ann_dir = os.path.join(saved_models_dir, f'classifiers/{dataset_name}')
+    ann_dir = os.path.join(saved_models_dir, 'classifiers', dataset_name)
     ann_folders = [f for f in os.listdir(ann_dir) if f.startswith('ann_rf')]
     
     if not ann_folders:
         raise FileNotFoundError(f"No ANN model found in {ann_dir}")
     
-    ann_path = os.path.join(ann_dir, ann_folders[0], 'state.pt')
+    ann_path = os.path.join(ann_dir, ann_folders[0], 'state.pth')
     print(f"Loading ANN from: {ann_path}")
     
     ann_state = torch.load(ann_path, map_location=device)
@@ -131,7 +131,7 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
     if not genre_folders:
         raise FileNotFoundError(f"No GenRe model found in {genre_dir}")
     
-    genre_path = os.path.join(genre_dir, genre_folders[0], 'state.pt')
+    genre_path = os.path.join(genre_dir, genre_folders[0], 'state.pth')
     print(f"Loading GenRe from: {genre_path}")
     
     genre_state = torch.load(genre_path, map_location=device)
