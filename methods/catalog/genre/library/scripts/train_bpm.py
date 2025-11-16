@@ -111,9 +111,10 @@ if __name__ == "__main__":
             best_state = None
             best_epoch = -1
 
-            num_epochs = 2000
+            num_epochs = 100 # 2000
             # batch_size= 8192 * 2 if DATASET_STR=='adult-all' else 2048
-            batch_size= 2048 if DATASET_STR=='adult-all' else 2048
+            # batch_size= 2048 if DATASET_STR=='adult-all' else 2048
+            batch_size= 512 if DATASET_STR=='adult-all' else 512
             print('bs: ',batch_size,'num epochs: ',num_epochs)
             learning_rate = 0.0001
             eval_freq = 10
@@ -129,6 +130,14 @@ if __name__ == "__main__":
 
             stt = time.time()
             try:
+                for batch_data in pair_loader_train:
+                    print(f"[DEBUG] batch_data type: {type(batch_data)}")
+                    print(f"[DEBUG] batch_data: {batch_data}")
+                    if isinstance(batch_data, (list, tuple)):
+                        print(f"[DEBUG] Length: {len(batch_data)}")
+                        for i, item in enumerate(batch_data):
+                            print(f"[DEBUG] Item {i} type: {type(item)}, shape: {item.shape if hasattr(item, 'shape') else 'no shape'}")
+                    break
                 for epoch in range(num_epochs):
                     train_loss = bpm.train_epoch(pair_model, optimizer,pair_loader_train, epoch,DEVICE, show_bar=epoch%200 == 0)
                     loss_log['train'].append(train_loss)

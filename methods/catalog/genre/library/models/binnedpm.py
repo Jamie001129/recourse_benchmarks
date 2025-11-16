@@ -174,7 +174,15 @@ class PairedTransformerBinned(nn.Module):
         src_emb = self.positional_encoding(self.real_embed(src))
         tgt_emb = self.positional_encoding(self.real_embed(tgt)) # [ycf,xcf] --> [xcf_preds]
         # outs_emb = self.transformer(src_emb, tgt_emb, tgt_mask = self.causal_mask, tgt_is_causal = True) # IMP: no masking in enccoder for now?
+        # transpose (seq_len, batch_size, emb_size)
+        src_emb = src_emb.transpose(0, 1)  # [B, S, E] -> [S, B, E]
+        tgt_emb = tgt_emb.transpose(0, 1)  # [B, S, E] -> [S, B, E]
+        
+        # print(f"[DEBUG] src_emb: {src_emb.shape}, tgt_emb: {tgt_emb.shape}, mask: {self.causal_mask.shape}")
         outs_emb = self.transformer(src_emb, tgt_emb, tgt_mask = self.causal_mask) 
+        
+        # Transpose output back! 
+        outs_emb = outs_emb.transpose(0, 1)  # [S, B, E] -> [B, S, E]
         outs = self.fc(outs_emb)[:,:-1]
     
         log_prob = outs.log_softmax(dim=-1)
