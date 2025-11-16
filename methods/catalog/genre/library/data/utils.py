@@ -12,6 +12,7 @@ from sklearn.model_selection import train_test_split
 sys.path.append("../")
 
 import utils
+import os
 
 
 def binary_gaussian(
@@ -58,7 +59,7 @@ def load_dataset(
     cust_labels_path=None,
     ret_tensor=False,
     min_max=False,
-    DATA_DIR="./datasets",
+    DATA_DIR=os.path.join(os.path.dirname(__file__), '..', 'datasets'), # changed for recourse benchmark paths
     ret_norm_dict=False,
     ret_masks = False,
     **kwargs,

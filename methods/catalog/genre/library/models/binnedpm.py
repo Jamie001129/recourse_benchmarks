@@ -28,7 +28,8 @@ class PairedTransformerBinnedExpanded(nn.Module):
                                        num_decoder_layers=num_decoder_layers,
                                        dim_feedforward=dim_feedforward,
                                        dropout=dropout,
-                                       batch_first=True)
+                                       # batch_first=True
+                                       )
         # self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.real_embed = RealEmbeddingNet(num_inputs + num_labels, emb_size, src_dim=1+ n_bins)
         # self.real_embed_tgt = RealEmbeddingNet(num_inputs + num_labels, emb_size, src_dim=1+ n_bins)
@@ -141,7 +142,8 @@ class PairedTransformerBinned(nn.Module):
                                        num_decoder_layers=num_decoder_layers,
                                        dim_feedforward=dim_feedforward,
                                        dropout=dropout,
-                                       batch_first=True)
+                                       # batch_first=True
+                                       )
         # self.generator = nn.Linear(emb_size, tgt_vocab_size)
         self.real_embed = RealEmbeddingNet(num_inputs + num_labels, emb_size)
         
@@ -171,7 +173,8 @@ class PairedTransformerBinned(nn.Module):
         tgt = torch.cat((ycf, xcf), dim=1) 
         src_emb = self.positional_encoding(self.real_embed(src))
         tgt_emb = self.positional_encoding(self.real_embed(tgt)) # [ycf,xcf] --> [xcf_preds]
-        outs_emb = self.transformer(src_emb, tgt_emb, tgt_mask = self.causal_mask, tgt_is_causal = True) # IMP: no masking in enccoder for now?
+        # outs_emb = self.transformer(src_emb, tgt_emb, tgt_mask = self.causal_mask, tgt_is_causal = True) # IMP: no masking in enccoder for now?
+        outs_emb = self.transformer(src_emb, tgt_emb, tgt_mask = self.causal_mask) 
         outs = self.fc(outs_emb)[:,:-1]
     
         log_prob = outs.log_softmax(dim=-1)

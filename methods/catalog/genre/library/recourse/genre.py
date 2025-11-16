@@ -11,7 +11,7 @@ class GenRe:
         self.ystar = ystar
         self.cat_mask = cat_mask
 
-    @torch.no_grad   
+    @torch.no_grad()   
     def __call__(self,xf_r):
         DEVICE = xf_r.device
         yf_r = torch.ones(xf_r.shape[0]).to(DEVICE)*self.ystar

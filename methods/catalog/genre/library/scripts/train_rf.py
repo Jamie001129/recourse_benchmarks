@@ -1,6 +1,6 @@
 import sys
-sys.path.append('./')
-# to be called from root directory as script/train_ann.py --args
+# sys.path.append('./') # to be called from root directory as script/train_ann.py --args
+sys.path.insert(0, '.') # from library
 import os
 import data.utils as dutils
 import utils

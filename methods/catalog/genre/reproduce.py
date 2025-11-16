@@ -22,15 +22,21 @@ from sklearn.neighbors import LocalOutlierFactor
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # Add GenRe library to path
-GENRE_LIB_PATH = os.path.join(os.path.dirname(__file__), 'methods/catalog/genre/library')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+GENRE_LIB_PATH = os.path.join(SCRIPT_DIR, 'library')
+print(f"[DEBUG] Script dir: {SCRIPT_DIR}")
+print(f"[DEBUG] Library path: {GENRE_LIB_PATH}")
+print(f"[DEBUG] Library exists: {os.path.exists(GENRE_LIB_PATH)}")
+print(f"[DEBUG] data/ exists: {os.path.exists(os.path.join(GENRE_LIB_PATH, 'data'))}")
 sys.path.insert(0, GENRE_LIB_PATH)
+
 
 # Import author's modules
 import data.utils as dutils
 import models.binnedpm as bpm
 import recourse.utils as rutils
 from recourse.genre import GenRe as GenReOriginal
-from models.classifiers.ann import ANN
+from models.classifiers.ann import BinaryClassifier # ann
 import utils as genre_utils
 
 
@@ -52,7 +58,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed')
     parser.add_argument('--saved_models_dir', type=str, 
-                       default='methods/catalog/genre/genre_lib/saved_models',
+                       default='methods/catalog/genre/library/saved_models',
                        help='Directory containing trained models')
     return parser.parse_args()
 
@@ -92,7 +98,7 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
         raise FileNotFoundError(f"RF model not found: {rf_path}")
     
     with open(rf_path, 'rb') as f:
-        rf_clf = pickle.load(f)
+        rf_clf = pickle.load(f, f, encoding='latin1')
     print(f"✓ RF loaded")
     
     # 2. Load ANN Classifier
@@ -108,7 +114,7 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
     ann_state = torch.load(ann_path, map_location=device)
     
     # Reconstruct ANN (must match training config!)
-    ann_clf = ANN(
+    ann_clf = BinaryClassifier(
         input_shape=input_dim,
         hidden_dims=[10, 10, 10],  # Default from train_ann.py
         output_dim=1

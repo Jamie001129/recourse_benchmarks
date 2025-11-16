@@ -1,6 +1,7 @@
 import sys
 
-sys.path.append("./")
+# sys.path.append("./")
+sys.path.insert(0, '.') 
 
 import warnings
 import os
@@ -41,7 +42,8 @@ if __name__ == "__main__":
             # 狄外思
             # DEVICE = f'cuda:{args.device}'
             # DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-            DEVICE = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+            # DEVICE = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+            DEVICE = torch.device(f'cuda:{args.device}' if torch.cuda.is_available() else "cpu")
             # DEVICE = torch.device("cpu")
 
             MIN_MAX = True

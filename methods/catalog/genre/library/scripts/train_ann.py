@@ -1,7 +1,9 @@
 import sys
-sys.path.append('./')
-# to be called from root directory as script/train_ann.py --args
+# which to use? try it and see
+# sys.path.append('./')
+sys.path.insert(0, '.') 
 import os
+
 from models.classifiers import ann
 import utils
 import torch
