@@ -140,4 +140,4 @@ dmypy.json
 
 # test results
 *.html
-methods/catalog/genre/library/saved_models/
+# methods/catalog/genre/library/saved_models/

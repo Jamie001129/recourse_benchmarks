@@ -27,7 +27,7 @@ class GenRe:
                 return sample_xcf
             sampled_list.append(sample_xcf.detach().unsqueeze(1))
 
-        sample_concat = torch.concat(sampled_list,dim=1)
+        sample_concat = torch.cat(sampled_list,dim=1)
         sample_predictions = self.model(sample_concat).squeeze() 
         best_sample_idx = sample_predictions.argmax(dim=1)
         return sample_concat[torch.arange(xf_r.shape[0]),best_sample_idx,:]

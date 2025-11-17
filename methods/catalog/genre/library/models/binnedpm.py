@@ -201,13 +201,23 @@ class PairedTransformerBinned(nn.Module):
     def _encode(self, xf,yf):
         yf = 2*yf - 1
         src = torch.cat((yf, xf), dim=1)
-        return self.transformer.encoder(self.positional_encoding(self.real_embed(src)))
+        src_emb = self.positional_encoding(self.real_embed(src))
+        src_emb = src_emb.transpose(0, 1)  # Transpose for PyTorch 1.7
+        return self.transformer.encoder(src_emb)
+        # return self.transformer.encoder(self.positional_encoding(self.real_embed(src)))
 
     def _decode(self, hist, tgt_mask, y, memory):
+        # y = 2*y - 1
+        # tgt = torch.cat((y, hist), dim=1)
+        # # just returns the logit values of bins in the next feature
+        # return self.fc(self.transformer.decoder(self.positional_encoding(self.real_embed(tgt)), memory, tgt_mask))[:,-1]
         y = 2*y - 1
         tgt = torch.cat((y, hist), dim=1)
-        # just returns the logit values of bins in the next feature
-        return self.fc(self.transformer.decoder(self.positional_encoding(self.real_embed(tgt)), memory, tgt_mask))[:,-1]
+        tgt_emb = self.positional_encoding(self.real_embed(tgt))
+        tgt_emb = tgt_emb.transpose(0, 1)  # Transpose for PyTorch 1.7
+        output = self.transformer.decoder(tgt_emb, memory, tgt_mask)
+        output = output.transpose(0, 1)  # Transpose back
+        return self.fc(output)[:,-1]
     
     @torch.no_grad()
     def _sample(self,xf,yf,y,sigma = 0.0, temp=1.0):
