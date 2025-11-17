@@ -111,10 +111,10 @@ if __name__ == "__main__":
             best_state = None
             best_epoch = -1
 
-            num_epochs = 100 # 2000
+            num_epochs = 2000 # 2000
             # batch_size= 8192 * 2 if DATASET_STR=='adult-all' else 2048
             # batch_size= 2048 if DATASET_STR=='adult-all' else 2048
-            batch_size= 512 if DATASET_STR=='adult-all' else 512
+            batch_size= 1024 if DATASET_STR=='adult-all' else 1024
             print('bs: ',batch_size,'num epochs: ',num_epochs)
             learning_rate = 0.0001
             eval_freq = 10

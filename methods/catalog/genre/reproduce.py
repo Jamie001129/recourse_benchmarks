@@ -7,7 +7,7 @@ Based on the author's genre_sampler.ipynb notebook.
 Usage:
     python reproduce.py --dataset adult-all --device cpu
 """
-
+import tqdm
 import argparse
 import os
 import sys
@@ -24,10 +24,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 # Add GenRe library to path
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 GENRE_LIB_PATH = os.path.join(SCRIPT_DIR, 'library')
-print(f"[DEBUG] Script dir: {SCRIPT_DIR}")
-print(f"[DEBUG] Library path: {GENRE_LIB_PATH}")
-print(f"[DEBUG] Library exists: {os.path.exists(GENRE_LIB_PATH)}")
-print(f"[DEBUG] data/ exists: {os.path.exists(os.path.join(GENRE_LIB_PATH, 'data'))}")
+# print(f"[DEBUG] Script dir: {SCRIPT_DIR}")
+# print(f"[DEBUG] Library path: {GENRE_LIB_PATH}")
+# print(f"[DEBUG] Library exists: {os.path.exists(GENRE_LIB_PATH)}")
+# print(f"[DEBUG] data/ exists: {os.path.exists(os.path.join(GENRE_LIB_PATH, 'data'))}")
 sys.path.insert(0, GENRE_LIB_PATH)
 
 
@@ -58,8 +58,8 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=42,
                        help='Random seed')
     parser.add_argument('--saved_models_dir', type=str, 
-                       default='methods/catalog/genre/library/saved_models',
-                       help='Directory containing trained models')
+                   default=None,  # None
+                   help='Directory containing trained models')
     return parser.parse_args()
 
 
@@ -76,7 +76,7 @@ def load_data(dataset_name):
         ret_masks=True
     )
     
-    print(f"✓ Data loaded successfully")
+    print(f"OK Data loaded successfully")
     print(f"  Train: {train_X.shape[0]} samples, {train_X.shape[1]} features")
     print(f"  Test:  {test_X.shape[0]} samples, {test_X.shape[1]} features")
     print(f"  Value range: [{train_X.min():.4f}, {train_X.max():.4f}]")
@@ -99,7 +99,7 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
     
     with open(rf_path, 'rb') as f:
         rf_clf = pickle.load(f)
-    print(f"✓ RF loaded")
+    print(f"OK RF loaded")
     
     # 2. Load ANN Classifier
     ann_dir = os.path.join(saved_models_dir, 'classifiers', dataset_name)
@@ -115,23 +115,27 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
     
     # Reconstruct ANN (must match training config!)
     ann_clf = BinaryClassifier(
-        input_shape=input_dim,
-        hidden_dims=[10, 10, 10],  # Default from train_ann.py
-        output_dim=1
+        layer_sizes=[input_dim, 10, 10, 10]
     )
-    ann_clf.load_state_dict(ann_state['model'])
+    ann_clf.load_state_dict(ann_state['state_dict'])
     ann_clf.to(device)
     ann_clf.eval()
-    print(f"✓ ANN loaded")
+    print(f"OK ANN loaded")
     
     # 3. Load GenRe Transformer
-    genre_dir = os.path.join(saved_models_dir, f'genre/{dataset_name}')
-    genre_folders = [f for f in os.listdir(genre_dir) if f.startswith('bpm')]
-    
+    genre_base = os.path.join(saved_models_dir, 'genre')
+    genre_folders = [f for f in os.listdir(genre_base) if f.startswith(dataset_name)]
+
     if not genre_folders:
-        raise FileNotFoundError(f"No GenRe model found in {genre_dir}")
+        raise FileNotFoundError(f"No GenRe model found for {dataset_name} in {genre_base}")
+
+    genre_dir = os.path.join(genre_base, genre_folders[0])
     
-    genre_path = os.path.join(genre_dir, genre_folders[0], 'state.pth')
+    genre_state_files = [f for f in os.listdir(genre_dir) if f.startswith('state_') and f.endswith('.pth')]
+    if not genre_state_files:
+        raise FileNotFoundError(f"No state file found in {genre_dir}")
+
+    genre_path = os.path.join(genre_dir, genre_state_files[0])
     print(f"Loading GenRe from: {genre_path}")
     
     genre_state = torch.load(genre_path, map_location=device)
@@ -145,13 +149,13 @@ def load_models(dataset_name, input_dim, device, saved_models_dir):
         num_decoder_layers=16,
         emb_size=32,           # From paper
         nhead=8,
-        dim_feedforward=512,   # Default
-        dropout=0.1            # Default
+        dim_feedforward=32,   # according to train_bpm.py
+        dropout=0.1            
     )
-    pair_model.load_state_dict(genre_state['model'])
+    pair_model.load_state_dict(genre_state['state_dict'])
     pair_model.to(device)
     pair_model.eval()
-    print(f"✓ GenRe Transformer loaded")
+    print(f"OK GenRe Transformer loaded")
     
     return rf_clf, ann_clf, pair_model
 
@@ -173,7 +177,7 @@ def generate_counterfactuals(test_X, test_y, ann_clf, pair_model, cat_mask,
         xf_r = xf_r[:n_samples]
     
     xf_r = xf_r.to(device)
-    print(f"✓ Found {len(xf_r)} negative instances (factuals)")
+    print(f"OK Found {len(xf_r)} negative instances (factuals)")
     
     # Initialize GenRe recourse module
     rec_module = GenReOriginal(
@@ -193,10 +197,11 @@ def generate_counterfactuals(test_X, test_y, ann_clf, pair_model, cat_mask,
     
     # Generate counterfactuals
     with torch.no_grad():
+        
         sample_xcf = rec_module(xf_r).squeeze()
         sample_xcf = sample_xcf.to(torch.float32)
     
-    print(f"✓ Generated {len(sample_xcf)} counterfactuals")
+    print(f"OK Generated {len(sample_xcf)} counterfactuals")
     
     return xf_r, sample_xcf
 
@@ -270,6 +275,11 @@ def evaluate_counterfactuals(xf_r, sample_xcf, rf_clf, train_X, test_X, device):
 
 def main():
     args = parse_args()
+
+    # Set default saved_models_dir if not provided
+    if args.saved_models_dir is None:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        args.saved_models_dir = os.path.join(script_dir, 'library', 'saved_models')
     
     print(f"\n{'='*80}")
     print(f"GenRe Reproduction - {args.dataset}")
@@ -328,37 +338,37 @@ def main():
     try:
         assert EXPECTED_VAL[0] <= val <= EXPECTED_VAL[1], \
             f"Val={val:.4f} outside expected range {EXPECTED_VAL}"
-        print(f"✓ Val = {val:.4f} is within expected range {EXPECTED_VAL}")
+        print(f"OK Val = {val:.4f} is within expected range {EXPECTED_VAL}")
     except AssertionError as e:
-        print(f"✗ WARNING: {e}")
+        print(f"FAIL WARNING: {e}")
     
     try:
         assert EXPECTED_LOF[0] <= lof <= EXPECTED_LOF[1], \
             f"LOF={lof:.4f} outside expected range {EXPECTED_LOF}"
-        print(f"✓ LOF = {lof:.4f} is within expected range {EXPECTED_LOF}")
+        print(f"OK LOF = {lof:.4f} is within expected range {EXPECTED_LOF}")
     except AssertionError as e:
-        print(f"✗ WARNING: {e}")
+        print(f"FAIL WARNING: {e}")
     
     try:
         assert EXPECTED_COST[0] <= cost <= EXPECTED_COST[1], \
             f"Cost={cost:.4f} outside expected range {EXPECTED_COST}"
-        print(f"✓ Cost = {cost:.4f} is within expected range {EXPECTED_COST}")
+        print(f"OK Cost = {cost:.4f} is within expected range {EXPECTED_COST}")
     except AssertionError as e:
-        print(f"✗ WARNING: {e}")
+        print(f"FAIL WARNING: {e}")
     
     try:
         assert EXPECTED_SCORE[0] <= score <= EXPECTED_SCORE[1], \
             f"Score={score:.4f} outside expected range {EXPECTED_SCORE}"
-        print(f"✓ Score = {score:.4f} is within expected range {EXPECTED_SCORE}")
+        print(f"OK Score = {score:.4f} is within expected range {EXPECTED_SCORE}")
     except AssertionError as e:
-        print(f"✗ WARNING: {e}")
+        print(f"FAIL WARNING: {e}")
     
     print(f"\n{'='*80}")
-    print(f"✓ Reproduction Complete!")
+    print(f"OK Reproduction Complete!")
     print(f"{'='*80}")
     
     # Save results
-    output_dir = f"results/genre_reproduction/{args.dataset}"
+    output_dir = os.path.join("results", "genre_reproduction", args.dataset)
     os.makedirs(output_dir, exist_ok=True)
     
     results_file = os.path.join(output_dir, 'metrics.txt')
@@ -369,7 +379,7 @@ def main():
             if value is not None:
                 f.write(f"{key}: {value}\n")
     
-    print(f"\n✓ Results saved to: {results_file}")
+    print(f"\nOK Results saved to: {results_file}")
 
 
 if __name__ == "__main__":
